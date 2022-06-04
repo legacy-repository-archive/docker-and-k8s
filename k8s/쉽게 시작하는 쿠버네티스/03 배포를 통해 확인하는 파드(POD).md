@@ -7,14 +7,24 @@
 쿠버네티스는 컨테이너를 관리하기 위한 솔루션(오케스트레이션)이다.     
 즉, Pod(파드)는 **특정한 목적을 수행하기 위한 컨테이너들의 집합(볼륨 포함)** 이다.     
 
+## 파드 생성 
 **master node**
-```
+```shell
 kubectl run nginx --image=nginx
 ```
 * kubectl : 쿠버네티스 사용을 위한 명령어 
 * run : 파드 또는 디플로이 먼트를 생성하기 위한 kubectl 옵션  
 * nginx : 파드의 이름
 * --image=nginx : 사용할 이미지의 이름 
+
+## 파드 확인 
+**master node**
+```shell
+kubectl get pod
+```
+* 모든 파드 및 디플로이먼트의 목록이 나온다.  
+* READY 라는 상태가 나오는데 ?/? 가 같으면 생성 완료고 다르면 생성중이다.  
+
 
 
 
