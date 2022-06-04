@@ -159,13 +159,18 @@ kubectl get services
 
 ## 배포한 것들 삭제하기 
   
+**expose 삭제하기**
+```shell
+kubectl delete service nginx
+kubectl delete service deploy-nginx
+```
 
+**디플로이먼트 삭제하기**
+```shell
+kubectl delete deployment deploy-nginx
+```
 
-
-
-
-
-
-
-
-
+**파드 삭제하기**
+```shell
+kubectl delete pod nginx
+```
