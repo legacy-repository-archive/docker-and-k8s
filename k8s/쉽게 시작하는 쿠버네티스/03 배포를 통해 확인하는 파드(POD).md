@@ -56,10 +56,115 @@ kubectl get service
 * PORT(S) : `--port번호/실제_외부에_노출된_포트` 
 * expose 로 설정했던 port는 노드 내에서 찾을 port이다.    
 
+```shell 
+kubectl get node -o wide
+```
+
+<img width="1607" alt="image" src="https://user-images.githubusercontent.com/50267433/171996389-bec90f45-ccc7-41ae-82fb-d15549f16a5e.png">
+
+위 결과에서 INTERNAL-IP(private ip) 를 기준으로 포트를 붙이면 pod 에 접근가능하다.  
+
+## 디플로이먼트 
+   
+만약 파드가 죽으면 어떻게 될까?        
+컨테이너는 격리된 환경을 지향하기에, 특별한 설정 없이는 데이터가 전부 날라갈 것이다.       
+그리고 이러한 단일 파드는 무중단 서비스를 운영하기에는 리스크가 너무 많다.   
+
+### 파드와 디플로이먼트의 차이 
+ 
+파드는, 특별한 작업을 처리하기 위한 '컨테이너들의 집합'의 **단일 개체**이다.       
+디플로이먼트는, 특별한 작업을 처리하고 운영하기 위한 **파드들의 집합**이며 **'컨테이너들의 집합'의 다수 개체**이다.       
+
+### 디플로이먼트 배포 방법 
+
+```
+kubectl run
+``` 
+`kubectl run`은  사실 쿠버네티스 버전1 때 등장한 파드 배포를 위한 명령어이다.      
+물론, 쿠버네티스 환경의 파드이기에 디플로이먼트 배포도 지원했지만, 1.8 버전 이후로는 지원을 중단랬다.     
+
+현재는 아래 2가지 명령어를 통해 pod 와 deployment 를 배포할 수 있다.  
+ 
+* kubectl create : 컨테이너 이미지를 통한 배포   
+* kubectl apply : 컨테이너 파일(yml)을 통한 배포     
+
+### 디플로이먼트 배포하기 
+
+```shell
+kubectl create deployment deploy-nginx --image=nginx
+```
+
+![image](https://user-images.githubusercontent.com/50267433/171996844-bb445be9-16ce-4c31-acd7-c55927511723.png)
+
+* kubectl create { pod / deployment } : run 과 다르게 어느 형태로 배포할지 선언해야한다.   
 
 
-
+<img width="1526" alt="image" src="https://user-images.githubusercontent.com/50267433/171996891-e5312df5-4f16-4f2a-b524-27ba5f8f1fa5.png">
   
+* `kubectl get pods`를 했을시 정상적으로 배포되었음을 확인할 수 있다.    
+* NAME 뒤에 특별한 문구들이 들어갔는데 '해쉬'를 이용한 고유 이름을 주었다고 생각하면 된다.  
+    * 디플로이먼트는 여러 파드의 단위이기에 각각의 파드들을 식별할 수 있도록 해시값을 넣어준 것이다.    
+  
+`kubectl get pods` 를 통해 알 수 있듯이 현재 하나의 파드만 배포가 된 상태이다.           
+다시 생각해보면 디플로이먼트는 파드의 집합이라고 했지만, 하나의 파드만 생성된 것이 이상하다.  
+ 
+사실 이는 정상적이며.    
+`kubectl apply`의 파일을 통해서 배포하면 한번에 디플로이내의 여러 파드를 배포할 수 있지만,    
+`kubectl create` 를 통해 배포하면 마스터에만 배포되고 이후 `replicaSet` 을 이용해야한다.        
+
+### 워커 노드에 배포하기   
+
+```shell
+kubectl scale deployment deploy-nginx --replicas=3
+```
+
+* kubectl scale deployment { 파드(디플로이) 이름 } : 스케입 아웃할 디플로이먼트 선택 
+* --replicas=? : 스케일 아웃할 개수 선택  
+
+<img width="1526" alt="image" src="https://user-images.githubusercontent.com/50267433/171997034-43add8c1-9052-485d-a8f8-f4f66bc677c8.png">
+
+* 결과를 보면 알 수 있듯이, 여러 파드들이 생성되었고 각각의 해시값을 이름에 포함하고 있다.   
+
+## 외부로 노출하는 더 좋은 방법인 로드 밸런서 
+
+### 디플로이먼트 외부로 노출하기 
+
+```shell
+kubectl expose deployment deploy-nginx --type=NodePort --port=80
+> service/deploy-nginx exposed
+```
+
+<img width="1526" alt="image" src="https://user-images.githubusercontent.com/50267433/171997271-7c37cb87-68b9-4653-b185-b7ab855a97ed.png">
+
+* pod 를 노출했던 것과 동일하게 디플로이먼트를 노출시킨다(pod -> deployment)  
+  
+단, 이전처럼 Inernal IP 를 찾아서 IP와 포트를 공개할 필요가 있을까?         
+이 같은 문제를 해결하고자 LoadBalancer를 이용해 **공용 IP 를 제공해주는 방법이 있다.**      
+이 같은 방법은 특정 노드가 죽었어도 영향을 받지 않으며 보안에 비교적 강하다는 장점이 있다.   
+
+네이티브 쿠버네티스 방식에서는 주로 `MetaLB`를 통해서 로드밸런서를 적용시킨다.     
+
+
+* 필자의 환경에서는 현재 MatLB와 강의에서 사용된 도커 이미지를 사용할 수 없으므로 이부분은 생략한다.  
+
+
+```shell
+kubectl expose deployment chk-hn --type=LoadBalancer --prot=80
+kubectl get services
+
+> NAME    TYPE    CLUSTER-IP    EXTERNAL-IP    PORT(S)    AGE
+ chk-hn LoadBalancer ...          공용 IP      80/외부 포트   ..     
+```
+* 결과와 같이 공용 IP가 나오는 것을 확인할 수 있다.  
+
+## 배포한 것들 삭제하기 
+  
+
+
+
+
+
+
 
 
 
